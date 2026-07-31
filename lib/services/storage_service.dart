@@ -8,14 +8,11 @@ Future<void> simpanDataLokal(
 ) async {
   final prefs = await SharedPreferences.getInstance();
 
-  // Simpan saldo
   await prefs.setInt('total_saldo', totalSaldo);
 
-  // Ubah List<Map> menjadi List<String> (JSON)
-  List<String> dataStringList =
+  final dataStringList =
       riwayat.map((item) => jsonEncode(item)).toList();
 
-  // Simpan riwayat
   await prefs.setStringList('riwayat', dataStringList);
 }
 
@@ -23,9 +20,9 @@ Future<void> simpanDataLokal(
 Future<Map<String, dynamic>> muatDataLokal() async {
   final prefs = await SharedPreferences.getInstance();
 
-  int saldo = prefs.getInt('total_saldo') ?? 0;
+  final saldo = prefs.getInt('total_saldo') ?? 0;
 
-  List<String>? dataStringList = prefs.getStringList('riwayat');
+  final dataStringList = prefs.getStringList('riwayat');
   List<Map<String, dynamic>> riwayat = [];
 
   if (dataStringList != null) {
