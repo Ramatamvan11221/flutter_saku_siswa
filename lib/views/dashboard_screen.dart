@@ -1,9 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/expense_tile.dart';
+import '../services/storage_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,34 +17,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _muatDataLokal();
+    _loadData();
   }
 
-  Future<void> _muatDataLokal() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _loadData() async {
+    final data = await muatDataLokal();
 
     setState(() {
-      _totalSaldo = prefs.getInt('total_saldo') ?? 0;
-
-      final dataStringList = prefs.getStringList('riwayat');
-
-      if (dataStringList != null) {
-        _riwayatPengeluaran = dataStringList
-            .map((item) => jsonDecode(item) as Map<String, dynamic>)
-            .toList();
-      }
+      _totalSaldo = data['saldo'];
+      _riwayatPengeluaran = List<Map<String, dynamic>>.from(
+        data['riwayat'],
+      );
     });
   }
 
-  Future<void> _simpanDataLokal() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setInt('total_saldo', _totalSaldo);
-
-    final dataStringList =
-        _riwayatPengeluaran.map((item) => jsonEncode(item)).toList();
-
-    await prefs.setStringList('riwayat', dataStringList);
+  Future<void> _saveData() async {
+    await simpanDataLokal(
+      _totalSaldo,
+      _riwayatPengeluaran,
+    );
   }
 
   void _tambahPengeluaran(String judul, int nominal) {
@@ -62,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     });
 
-    _simpanDataLokal();
+    _saveData();
   }
 
   void _tampilkanModalInput() {
@@ -92,7 +81,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               'Tambah Pengeluaran',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-
             const SizedBox(height: 12),
 
             TextField(
@@ -122,7 +110,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   final judul = judulController.text;
-
                   final nominal =
                       int.tryParse(nominalController.text) ?? 0;
 
@@ -146,18 +133,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('SakuSiswa Dashboard'),
         centerTitle: true,
       ),
-
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             BalanceCard(
-  balance: _totalSaldo,
-  onAddBalance: () {
-    setState(() => _totalSaldo += 50000);
-    _simpanDataLokal();
-  },
-),
+              balance: _totalSaldo,
+              onAddBalance: () {
+                setState(() {
+                  _totalSaldo += 50000;
+                });
+                _saveData();
+              },
+            ),
 
             const SizedBox(height: 20),
 
@@ -178,23 +166,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: _riwayatPengeluaran.isEmpty
                   ? const Center(
                       child: Text(
-                        'Belum ada pengeluaran hari ini. '
-                        'Hemat banget! 🎉',
+                        'Belum ada pengeluaran hari ini. Hemat banget! 🎉',
                       ),
                     )
                   : ListView.builder(
                       itemCount: _riwayatPengeluaran.length,
                       itemBuilder: (context, index) {
-                        final item = _riwayatPengeluaran[index];
-
-                        return ExpenseTile(item: item);
+                        return ExpenseTile(
+                          item: _riwayatPengeluaran[index],
+                        );
                       },
                     ),
             ),
           ],
         ),
       ),
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _tampilkanModalInput,
         icon: const Icon(Icons.remove_circle_outline),
